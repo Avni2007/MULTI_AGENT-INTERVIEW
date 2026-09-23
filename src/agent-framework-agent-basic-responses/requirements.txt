@@ -1,0 +1,17 @@
+agent-framework-foundry
+agent-framework-foundry-hosting>=1.0.0a260630
+
+# debugpy enables local debugging of this agent with the Foundry Toolkit VS Code extension.
+debugpy
+
+# Employability AI web application dependencies
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.0
+a2a-sdk[http-server]>=1.1.5
+agent-framework-a2a==1.0.0b260918
+numpy>=2.0.0
+pandas>=2.2.0
+scikit-learn>=1.5.0
+opencv-python>=4.10.0
