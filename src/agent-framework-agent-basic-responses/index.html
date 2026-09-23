@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Employability AI — Resume Analyzer</title>
+  <meta name="description" content="AI-powered resume analysis using Microsoft Azure Foundry. Upload your resume to get a detailed score, strengths, improvements, and job alignment insights." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Design Tokens ─────────────────────────────────────────────────────── */
+    :root {
+      --bg-primary:    #080c14;
+      --bg-secondary:  #0d1424;
+      --bg-card:       rgba(255,255,255,0.04);
+      --bg-card-hover: rgba(255,255,255,0.07);
+      --border:        rgba(255,255,255,0.08);
+      --border-accent: rgba(99,179,237,0.35);
+
+      --text-primary:  #f0f4ff;
+      --text-secondary:#94a3b8;
+      --text-muted:    #475569;
+
+      --accent-blue:   #4f9cf9;
+      --accent-violet: #8b5cf6;
+      --accent-cyan:   #22d3ee;
+      --accent-emerald:#10b981;
+      --accent-amber:  #f59e0b;
+      --accent-rose:   #f43f5e;
+
+      --gradient-hero: linear-gradient(135deg, #4f9cf9 0%, #8b5cf6 50%, #22d3ee 100%);
+      --gradient-card: linear-gradient(135deg, rgba(79,156,249,0.12), rgba(139,92,246,0.08));
+      --shadow-glow:   0 0 40px rgba(79,156,249,0.18);
+      --shadow-card:   0 8px 32px rgba(0,0,0,0.45);
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+
+      --transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ── Reset ──────────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Background grid decoration ─────────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(79,156,249,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,156,249,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────────────────── */
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      padding: 64px 0 40px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(79,156,249,0.12);
+      border: 1px solid rgba(79,156,249,0.3);
+      border-radius: 100px;
+      padding: 6px 18px;
+      margin-bottom: 28px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-blue);
+      letter-spacing: 0.5px;
+    }
+    .logo-badge .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2.4rem, 6vw, 3.6rem);
+      font-weight: 800;
+      line-height: 1.1;
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+    }
+
+    .subtitle {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      margin: 0 auto;
+      line-height: 1.65;
+    }
+
+    /* ── Card ────────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 36px;
+      backdrop-filter: blur(20px);
+      box-shadow: var(--shadow-card);
+      transition: var(--transition);
+    }
+
+    /* ── Upload Zone ─────────────────────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      background: rgba(79,156,249,0.03);
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent-blue);
+      background: rgba(79,156,249,0.08);
+      box-shadow: var(--shadow-glow);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-icon {
+      width: 56px; height: 56px;
+      margin: 0 auto 18px;
+      background: var(--gradient-hero);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+    .upload-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .upload-hint {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .upload-hint span {
+      color: var(--accent-blue);
+      font-weight: 500;
+    }
+    .file-selected {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      margin-top: 16px;
+    }
+    .file-selected.visible { display: flex; }
+    .file-selected .file-icon { font-size: 22px; }
+    .file-selected .file-name {
+      font-weight: 500;
+      color: var(--accent-emerald);
+      font-size: 0.9rem;
+      flex: 1;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .file-selected .remove-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 0 4px;
+      transition: var(--transition);
+    }
+    .file-selected .remove-btn:hover { color: var(--accent-rose); }
+
+    /* ── Section labels ──────────────────────────────────────────────────────── */
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .input-group {
+      margin-top: 28px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      padding: 16px;
+      resize: vertical;
+      transition: var(--transition);
+      outline: none;
+    }
+    textarea:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(79,156,249,0.15);
+    }
+    textarea::placeholder { color: var(--text-muted); }
+
+    /* ── Analyze Button ──────────────────────────────────────────────────────── */
+    .btn-analyze {
+      width: 100%;
+      margin-top: 28px;
+      padding: 18px 32px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--gradient-hero);
+      color: #fff;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+      box-shadow: 0 4px 20px rgba(79,156,249,0.35);
+    }
+    .btn-analyze:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(79,156,249,0.5);
+    }
+    .btn-analyze:active:not(:disabled) { transform: translateY(0); }
+    .btn-analyze:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .btn-analyze .btn-text { transition: var(--transition); }
+    .btn-analyze .spinner {
+      display: none;
+      width: 20px; height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin: 0 auto;
+    }
+    .btn-analyze.loading .btn-text { display: none; }
+    .btn-analyze.loading .spinner { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error / Status ──────────────────────────────────────────────────────── */
+    .alert {
+      display: none;
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      font-size: 0.9rem;
+      margin-top: 20px;
+      font-weight: 500;
+    }
+    .alert.visible { display: block; }
+    .alert.error {
+      background: rgba(244,63,94,0.12);
+      border: 1px solid rgba(244,63,94,0.35);
+      color: #fca5a5;
+    }
+    .alert.warning {
+      background: rgba(245,158,11,0.12);
+      border: 1px solid rgba(245,158,11,0.35);
+      color: #fcd34d;
+    }
+
+    /* ── Results ─────────────────────────────────────────────────────────────── */
+    #results {
+      display: none;
+      margin-top: 40px;
+    }
+    #results.visible { display: block; }
+
+    /* ── Score Hero ──────────────────────────────────────────────────────────── */
+    .score-hero {
+      background: var(--gradient-card);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-xl);
+      padding: 40px;
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow-glow);
+    }
+
+    .score-ring-wrap {
+      flex-shrink: 0;
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+    .score-ring-wrap svg {
+      transform: rotate(-90deg);
+    }
+    .score-ring-bg {
+      fill: none;
+      stroke: rgba(255,255,255,0.07);
+      stroke-width: 10;
+    }
+    .score-ring-fill {
+      fill: none;
+      stroke-width: 10;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1);
+      stroke: url(#scoreGradient);
+    }
+    .score-number {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-number .big {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1;
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .score-number .out-of {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .score-meta { flex: 1; min-width: 200px; }
+    .score-meta h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .score-grade {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .grade-excellent { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid rgba(16,185,129,0.4); }
+    .grade-good      { background: rgba(79,156,249,0.2); color: #93c5fd; border: 1px solid rgba(79,156,249,0.4); }
+    .grade-fair      { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid rgba(245,158,11,0.4); }
+    .grade-poor      { background: rgba(244,63,94,0.2);  color: #fca5a5; border: 1px solid rgba(244,63,94,0.4); }
+
+    /* ── Category Scores ─────────────────────────────────────────────────────── */
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .cat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px;
+      transition: var(--transition);
+    }
+    .cat-card:hover { background: var(--bg-card-hover); border-color: rgba(79,156,249,0.2); }
+
+    .cat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .cat-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .cat-icon { font-size: 18px; }
+    .cat-score {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .cat-bar-track {
+      height: 6px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 100px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .cat-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      transition: width 1s cubic-bezier(0.4,0,0.2,1);
+    }
+    .cat-reason {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* ── Insight Sections ────────────────────────────────────────────────────── */
+    .insights-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 680px) {
+      .insights-grid { grid-template-columns: 1fr; }
+      .score-hero { flex-direction: column; align-items: flex-start; gap: 24px; }
+    }
+
+    .insight-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+
+    .insight-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .insight-icon {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .insight-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .insight-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .insight-list li {
+      display: flex;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      align-items: flex-start;
+    }
+    .insight-list li .bullet {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      margin-top: 1px;
+    }
+
+    /* Strengths */
+    .icon-strength  { background: rgba(16,185,129,0.15); }
+    .bullet-strength { background: rgba(16,185,129,0.2); color: #34d399; }
+
+    /* Improvements */
+    .icon-improve { background: rgba(245,158,11,0.15); }
+    .bullet-improve { background: rgba(245,158,11,0.2); color: #fcd34d; }
+
+    /* Missing */
+    .icon-missing { background: rgba(244,63,94,0.15); }
+    .bullet-missing { background: rgba(244,63,94,0.15); color: #fca5a5; }
+
+    /* Matches */
+    .icon-match { background: rgba(34,211,238,0.15); }
+    .bullet-match { background: rgba(34,211,238,0.15); color: #67e8f9; }
+
+    /* Gaps */
+    .icon-gap { background: rgba(139,92,246,0.15); }
+    .bullet-gap { background: rgba(139,92,246,0.15); color: #c4b5fd; }
+
+    /* Weak bullets */
+    .weak-bullets-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+
+    .bullet-pair {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .bullet-pair:last-child { margin-bottom: 0; }
+
+    .bullet-original {
+      background: rgba(244,63,94,0.07);
+      border: 1px solid rgba(244,63,94,0.2);
+      padding: 12px 16px;
+      font-size: 0.83rem;
+      color: #fca5a5;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+    }
+    .bullet-improved {
+      background: rgba(16,185,129,0.07);
+      border: 1px solid rgba(16,185,129,0.2);
+      border-top: none;
+      padding: 12px 16px;
+      font-size: 0.83rem;
+      color: #6ee7b7;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+    }
+    .bullet-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      opacity: 0.65;
+      margin-bottom: 4px;
+    }
+
+    /* ── Empty state ─────────────────────────────────────────────────────────── */
+    .empty-tag {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 8px 0;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 32px 0 0;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      margin-top: 60px;
+    }
+    footer span { color: var(--accent-blue); }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: rgba(79,156,249,0.3); border-radius: 100px; }
+  </style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-badge">
+      <span class="dot"></span>
+      Powered by Microsoft Azure Foundry + GPT-4.1-mini
+    </div>
+    <h1>Employability AI</h1>
+    <p class="subtitle">
+      Upload your resume and get an instant AI-powered analysis — scores, strengths, improvements, and job-fit insights — in seconds.
+    </p>
+  </header>
+
+  <!-- Upload Card -->
+  <div class="card">
+
+    <!-- Drop Zone -->
+    <div class="section-label">Resume Document</div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="fileInput" accept=".pdf,.docx" aria-label="Upload resume file" />
+      <div class="upload-icon">📄</div>
+      <div class="upload-title">Drop your resume here or click to browse</div>
+      <div class="upload-hint">Supports <span>PDF</span> and <span>DOCX</span> · Max 10 MB</div>
+    </div>
+
+    <!-- File selected indicator -->
+    <div class="file-selected" id="fileSelected">
+      <span class="file-icon">✅</span>
+      <span class="file-name" id="fileName">resume.pdf</span>
+      <button class="remove-btn" id="removeBtn" aria-label="Remove file">✕</button>
+    </div>
+
+    <!-- Job Description -->
+    <div class="input-group">
+      <div class="section-label">Job Description <span style="font-style:italic; text-transform:none; font-weight:400; letter-spacing:0; color: var(--text-muted);">(optional — improves alignment scoring)</span></div>
+      <textarea
+        id="jobDescription"
+        placeholder="Paste the job description here to get detailed job-fit analysis, matched requirements, and skill gaps identified…"
+        aria-label="Job description"
+      ></textarea>
+    </div>
+
+    <!-- Submit -->
+    <button class="btn-analyze" id="analyzeBtn" disabled>
+      <span class="btn-text">✨ Analyze Resume</span>
+      <div class="spinner"></div>
+    </button>
+
+    <!-- Alerts -->
+    <div class="alert error" id="errorAlert"></div>
+    <div class="alert warning" id="warnAlert"></div>
+  </div>
+
+  <!-- Results Section -->
+  <div id="results">
+
+    <!-- Score Hero -->
+    <div class="score-hero" id="scoreHero">
+      <div class="score-ring-wrap">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          <defs>
+            <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="#4f9cf9"/>
+              <stop offset="50%"  stop-color="#8b5cf6"/>
+              <stop offset="100%" stop-color="#22d3ee"/>
+            </linearGradient>
+          </defs>
+          <circle class="score-ring-bg" cx="70" cy="70" r="58"/>
+          <circle class="score-ring-fill" id="scoreRing" cx="70" cy="70" r="58"
+                  stroke-dasharray="364.4"
+                  stroke-dashoffset="364.4"/>
+        </svg>
+        <div class="score-number">
+          <div class="big" id="scoreDisplay">0</div>
+          <div class="out-of">out of 100</div>
+        </div>
+      </div>
+
+      <div class="score-meta">
+        <h2 id="scoreTitle">Resume Analysis</h2>
+        <div class="score-grade" id="scoreGrade"></div>
+        <p style="margin-top:14px; font-size:0.85rem; color:var(--text-secondary); line-height:1.6;" id="scoreSummary"></p>
+      </div>
+    </div>
+
+    <!-- Category Scores -->
+    <div class="section-label" style="margin-bottom:16px;">Category Breakdown</div>
+    <div class="categories-grid" id="categoriesGrid"></div>
+
+    <!-- Insights Grid -->
+    <div class="insights-grid" id="insightsGrid"></div>
+
+    <!-- Weak Bullets -->
+    <div id="weakBulletsSection"></div>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    Employability AI · Built on <span>Microsoft Azure Foundry</span> · GPT-4.1-mini + Azure Document Intelligence
+  </footer>
+</div>
+
+<script>
+  /* ── Category config ─────────────────────────────────────────────────────── */
+  const CATEGORIES = [
+    { key: 'structure',        label: 'Structure',        max: 10,  icon: '🏗️',  color: '#4f9cf9' },
+    { key: 'skills',           label: 'Skills',           max: 15,  icon: '⚡',  color: '#8b5cf6' },
+    { key: 'experience',       label: 'Experience',       max: 20,  icon: '💼',  color: '#22d3ee' },
+    { key: 'projects',         label: 'Projects',         max: 15,  icon: '🚀',  color: '#10b981' },
+    { key: 'achievements',     label: 'Achievements',     max: 10,  icon: '🏆',  color: '#f59e0b' },
+    { key: 'education',        label: 'Education',        max: 10,  icon: '🎓',  color: '#f43f5e' },
+    { key: 'job_alignment',    label: 'Job Alignment',    max: 15,  icon: '🎯',  color: '#06b6d4' },
+    { key: 'clarity_language', label: 'Clarity & Language', max: 5, icon: '✍️',  color: '#a78bfa' },
+  ];
+
+  /* ── State ───────────────────────────────────────────────────────────────── */
+  let selectedFile = null;
+
+  /* ── Elements ────────────────────────────────────────────────────────────── */
+  const uploadZone   = document.getElementById('uploadZone');
+  const fileInput    = document.getElementById('fileInput');
+  const fileSelected = document.getElementById('fileSelected');
+  const fileNameEl   = document.getElementById('fileName');
+  const removeBtn    = document.getElementById('removeBtn');
+  const jobDesc      = document.getElementById('jobDescription');
+  const analyzeBtn   = document.getElementById('analyzeBtn');
+  const errorAlert   = document.getElementById('errorAlert');
+  const warnAlert    = document.getElementById('warnAlert');
+  const resultsEl    = document.getElementById('results');
+
+  /* ── File selection ──────────────────────────────────────────────────────── */
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files[0];
+    if (f) setFile(f);
+  });
+
+  uploadZone.addEventListener('dragover', e => {
+    e.preventDefault();
+    uploadZone.classList.add('drag-over');
+  });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) setFile(f);
+  });
+
+  removeBtn.addEventListener('click', () => clearFile());
+
+  function setFile(f) {
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['pdf','docx'].includes(ext)) {
+      showError(`Unsupported file type ".${ext}". Please upload a PDF or DOCX file.`);
+      return;
+    }
+    if (f.size > 10 * 1024 * 1024) {
+      showError(`File too large (${(f.size/1024/1024).toFixed(1)} MB). Maximum is 10 MB.`);
+      return;
+    }
+    selectedFile = f;
+    fileNameEl.textContent = f.name;
+    fileSelected.classList.add('visible');
+    analyzeBtn.disabled = false;
+    clearAlerts();
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    fileInput.value = '';
+    fileSelected.classList.remove('visible');
+    analyzeBtn.disabled = true;
+    clearAlerts();
+  }
+
+  /* ── Alerts ──────────────────────────────────────────────────────────────── */
+  function showError(msg) {
+    errorAlert.textContent = '⚠️ ' + msg;
+    errorAlert.classList.add('visible');
+    warnAlert.classList.remove('visible');
+  }
+  function showWarn(msg) {
+    warnAlert.textContent = '💡 ' + msg;
+    warnAlert.classList.add('visible');
+  }
+  function clearAlerts() {
+    errorAlert.classList.remove('visible');
+    warnAlert.classList.remove('visible');
+  }
+
+  /* ── Analyze ─────────────────────────────────────────────────────────────── */
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    clearAlerts();
+    setLoading(true);
+    resultsEl.classList.remove('visible');
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('job_description', jobDesc.value.trim());
+
+    try {
+      const res = await fetch('/analyze', { method: 'POST', body: formData });
+
+      if (!res.ok) {
+        let detail = `Server error ${res.status}`;
+        try {
+          const err = await res.json();
+          detail = err.detail || detail;
+        } catch {}
+        throw new Error(detail);
+      }
+
+      const data = await res.json();
+      renderResults(data);
+    } catch (err) {
+      showError(err.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  function setLoading(on) {
+    analyzeBtn.disabled = on;
+    analyzeBtn.classList.toggle('loading', on);
+  }
+
+  /* ── Render Results ──────────────────────────────────────────────────────── */
+  function renderResults(data) {
+    // Overall score
+    const score = data.overall_score ?? 0;
+    animateScore(score);
+    setGrade(score);
+
+    // Category cards
+    const grid = document.getElementById('categoriesGrid');
+    grid.innerHTML = '';
+    CATEGORIES.forEach(cat => {
+      const cs = data.category_scores?.[cat.key];
+      const s  = cs?.score ?? 0;
+      const pct = Math.min(100, (s / cat.max) * 100);
+      grid.innerHTML += `
+        <div class="cat-card">
+          <div class="cat-header">
+            <div class="cat-name">
+              <span class="cat-icon">${cat.icon}</span>
+              ${cat.label}
+            </div>
+            <div class="cat-score" style="color:${cat.color}">${s}/${cat.max}</div>
+          </div>
+          <div class="cat-bar-track">
+            <div class="cat-bar-fill" style="width:0%;background:${cat.color}" data-pct="${pct}"></div>
+          </div>
+          <div class="cat-reason">${cs?.reason || 'Not evaluated.'}</div>
+        </div>`;
+    });
+    // Animate bars after paint
+    requestAnimationFrame(() => {
+      grid.querySelectorAll('.cat-bar-fill').forEach(el => {
+        el.style.width = el.dataset.pct + '%';
+      });
+    });
+
+    // Insights
+    const insightsGrid = document.getElementById('insightsGrid');
+    insightsGrid.innerHTML = '';
+
+    const hasJD = jobDesc.value.trim().length > 0;
+
+    const panels = [
+      {
+        title: 'Strengths',
+        icon: '✅', iconClass: 'icon-strength', bulletClass: 'bullet-strength', bulletText: '✓',
+        items: data.strengths || [],
+        emptyMsg: 'No specific strengths identified.',
+      },
+      {
+        title: 'Improvements',
+        icon: '💡', iconClass: 'icon-improve', bulletClass: 'bullet-improve', bulletText: '!',
+        items: data.improvements || [],
+        emptyMsg: 'No improvements suggested.',
+      },
+      {
+        title: 'Missing Information',
+        icon: '❓', iconClass: 'icon-missing', bulletClass: 'bullet-missing', bulletText: '–',
+        items: data.missing_information || [],
+        emptyMsg: 'No missing information identified.',
+      },
+    ];
+
+    if (hasJD) {
+      panels.push(
+        {
+          title: 'Job Matches',
+          icon: '🎯', iconClass: 'icon-match', bulletClass: 'bullet-match', bulletText: '✓',
+          items: data.job_matches || [],
+          emptyMsg: 'No matching requirements found.',
+        },
+        {
+          title: 'Job Gaps',
+          icon: '📋', iconClass: 'icon-gap', bulletClass: 'bullet-gap', bulletText: '△',
+          items: data.job_gaps || [],
+          emptyMsg: 'No gaps identified.',
+        },
+      );
+    }
+
+    panels.forEach(p => {
+      insightsGrid.innerHTML += `
+        <div class="insight-card">
+          <div class="insight-header">
+            <div class="insight-icon ${p.iconClass}">${p.icon}</div>
+            <div class="insight-title">${p.title}</div>
+          </div>
+          ${p.items.length
+            ? `<ul class="insight-list">${p.items.map(item =>
+                `<li><span class="bullet ${p.bulletClass}">${p.bulletText}</span>${escHtml(item)}</li>`
+              ).join('')}</ul>`
+            : `<p class="empty-tag">${p.emptyMsg}</p>`
+          }
+        </div>`;
+    });
+
+    // Weak bullets
+    const wbSection = document.getElementById('weakBulletsSection');
+    const wb = data.weak_bullets || [];
+    if (wb.length > 0) {
+      wbSection.innerHTML = `
+        <div class="weak-bullets-card">
+          <div class="insight-header" style="margin-bottom:20px">
+            <div class="insight-icon" style="background:rgba(244,63,94,0.15);">✏️</div>
+            <div class="insight-title">Weak Bullets — Suggested Rewrites</div>
+          </div>
+          ${wb.map(b => `
+            <div class="bullet-pair">
+              <div class="bullet-original">
+                <div class="bullet-label">Original</div>
+                ${escHtml(b.original || '')}
+              </div>
+              <div class="bullet-improved">
+                <div class="bullet-label">Improved</div>
+                ${escHtml(b.improved || '')}
+              </div>
+            </div>`).join('')}
+        </div>`;
+    } else {
+      wbSection.innerHTML = '';
+    }
+
+    resultsEl.classList.add('visible');
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ── Score Ring Animation ────────────────────────────────────────────────── */
+  function animateScore(score) {
+    const circumference = 364.4;
+    const offset = circumference - (score / 100) * circumference;
+    const ring = document.getElementById('scoreRing');
+    const display = document.getElementById('scoreDisplay');
+    const title = document.getElementById('scoreTitle');
+
+    ring.style.strokeDashoffset = circumference; // reset
+    display.textContent = '0';
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        ring.style.strokeDashoffset = offset;
+      }, 50);
+    });
+
+    // Counter animation
+    let current = 0;
+    const duration = 1200;
+    const step = duration / score;
+    const counter = setInterval(() => {
+      current++;
+      display.textContent = current;
+      if (current >= score) {
+        display.textContent = score;
+        clearInterval(counter);
+      }
+    }, step);
+
+    title.textContent = 'Resume Score';
+  }
+
+  function setGrade(score) {
+    const gradeEl = document.getElementById('scoreGrade');
+    const summary = document.getElementById('scoreSummary');
+    let cls, label, msg;
+
+    if (score >= 85) {
+      cls = 'grade-excellent'; label = 'Excellent';
+      msg = 'Your resume is strong and well-structured. Minor refinements can push it to perfect.';
+    } else if (score >= 70) {
+      cls = 'grade-good'; label = 'Good';
+      msg = 'Your resume is competitive. A few targeted improvements will significantly increase your chances.';
+    } else if (score >= 50) {
+      cls = 'grade-fair'; label = 'Fair';
+      msg = 'Your resume has potential but needs meaningful improvements to stand out.';
+    } else {
+      cls = 'grade-poor'; label = 'Needs Work';
+      msg = 'Your resume requires significant revision. Focus on the improvements and missing sections.';
+    }
+
+    gradeEl.className = 'score-grade ' + cls;
+    gradeEl.textContent = label;
+    summary.textContent = msg;
+  }
+
+  /* ── Utility ─────────────────────────────────────────────────────────────── */
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
