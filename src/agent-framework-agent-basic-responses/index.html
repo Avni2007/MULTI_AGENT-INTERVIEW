@@ -943,7 +943,29 @@
       box-shadow: 0 20px 50px rgba(15, 23, 42, 0.15);
       position: relative;
     }
-    .modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .modal-close-btn {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: #f1f5f9;
+      color: var(--text-muted);
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.15rem;
+      transition: var(--transition);
+      line-height: 1;
+    }
+    .modal-close-btn:hover {
+      background: #e2e8f0;
+      color: var(--text-primary);
+    }
+    .modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; padding-right: 28px; }
     .modal-tab {
       flex: 1;
       padding: 12px;
@@ -957,6 +979,43 @@
       border-bottom: 2px solid transparent;
     }
     .modal-tab.active { color: var(--accent-blue); border-bottom-color: var(--accent-blue); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 24px;
+      background: #ffffff;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+    .btn-secondary:hover {
+      background: #eff6ff;
+      color: var(--accent-blue);
+      border-color: #93c5fd;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.12);
+      transform: translateY(-1px);
+    }
+    .btn-secondary:active {
+      transform: translateY(0);
+    }
+
+    /* Clean modern autofill styling so browser doesn't inject ugly yellow background */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus, 
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
+      -webkit-text-fill-color: var(--text-primary) !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
 
     /* History Table */
     .history-table {
@@ -1270,7 +1329,7 @@
                 <button class="btn-primary" id="submitQuestionBtn" type="button" style="background:var(--accent-emerald);">
                   <span id="submitCodeIcon">✓</span> <span id="submitCodeText">Submit Answer</span>
                 </button>
-                <button class="btn-primary" id="nextQuestionBtn" type="button" style="background:var(--bg-surface); border:1px solid var(--border);">
+                <button class="btn-secondary" id="nextQuestionBtn" type="button">
                   Next →
                 </button>
                 <span id="compilerExecutingSpinner" style="display:none; font-size:0.85rem; color:var(--accent-cyan); font-weight:500;">
@@ -1309,7 +1368,7 @@
               <div class="mcq-options" id="mcqOptionsContainer"></div>
               <div style="display:flex; gap:12px; margin-top:16px;">
                 <button class="btn-primary" id="submitMcqBtn" style="background:var(--accent-emerald);">Submit MCQ Answer</button>
-                <button class="btn-primary" id="nextMcqBtn" style="background:var(--bg-surface); border:1px solid var(--border);">Next →</button>
+                <button class="btn-secondary" id="nextMcqBtn" type="button">Next →</button>
               </div>
               <div class="output-console" id="mcqFeedbackBox" style="display:none; margin-top:16px;">
                 <h5>Question Feedback</h5>
@@ -1325,7 +1384,7 @@
               </div>
               <div style="display:flex; gap:12px; margin-top:16px;">
                 <button class="btn-primary" id="submitInterviewTextBtn" style="background:var(--accent-emerald);">Submit Response</button>
-                <button class="btn-primary" id="nextInterviewTextBtn" style="background:var(--bg-surface); border:1px solid var(--border);">Next →</button>
+                <button class="btn-secondary" id="nextInterviewTextBtn" type="button">Next →</button>
               </div>
               <div class="output-console" id="interviewFeedbackBox" style="display:none; margin-top:16px;">
                 <h5>AI Evaluation Feedback</h5>
@@ -1388,6 +1447,7 @@
 <!-- Auth Modal (Signup / Login) -->
 <div class="modal-overlay" id="authModal">
   <div class="modal-card">
+    <button type="button" class="modal-close-btn" id="modalCloseXBtn" aria-label="Close modal">&times;</button>
     <div class="modal-tabs">
       <button class="modal-tab active" id="tabLogin">Sign In</button>
       <button class="modal-tab" id="tabSignup">Create Account</button>
@@ -1397,15 +1457,15 @@
     <form id="loginForm">
       <div class="form-group">
         <label class="form-label" for="loginEmail">Email Address</label>
-        <input type="email" id="loginEmail" class="form-control" placeholder="name@domain.com" required />
+        <input type="email" id="loginEmail" class="form-control" placeholder="name@domain.com" autocomplete="username" required />
       </div>
       <div class="form-group">
         <label class="form-label" for="loginPassword">Password</label>
-        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required />
+        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" autocomplete="current-password" required />
       </div>
       <div style="margin-top:24px; display:flex; gap:12px;">
         <button type="submit" class="btn-primary" style="flex:1;">Sign In</button>
-        <button type="button" class="btn-primary" id="closeAuthModalBtn" style="background:var(--bg-surface); border:1px solid var(--border);">Cancel</button>
+        <button type="button" class="btn-secondary" id="closeAuthModalBtn">Cancel</button>
       </div>
     </form>
 
@@ -1413,19 +1473,19 @@
     <form id="signupForm" style="display:none;">
       <div class="form-group">
         <label class="form-label" for="signupName">Full Name</label>
-        <input type="text" id="signupName" class="form-control" placeholder="Jane Doe" required />
+        <input type="text" id="signupName" class="form-control" placeholder="Jane Doe" autocomplete="name" required />
       </div>
       <div class="form-group">
         <label class="form-label" for="signupEmail">Email Address</label>
-        <input type="email" id="signupEmail" class="form-control" placeholder="name@domain.com" required />
+        <input type="email" id="signupEmail" class="form-control" placeholder="name@domain.com" autocomplete="email" required />
       </div>
       <div class="form-group">
         <label class="form-label" for="signupPassword">Password</label>
-        <input type="password" id="signupPassword" class="form-control" placeholder="At least 6 characters" required />
+        <input type="password" id="signupPassword" class="form-control" placeholder="At least 6 characters" autocomplete="new-password" required />
       </div>
       <div style="margin-top:24px; display:flex; gap:12px;">
         <button type="submit" class="btn-primary" style="flex:1;">Create Account</button>
-        <button type="button" class="btn-primary" id="closeSignupAuthModalBtn" style="background:var(--bg-surface); border:1px solid var(--border);">Cancel</button>
+        <button type="button" class="btn-secondary" id="closeSignupAuthModalBtn">Cancel</button>
       </div>
     </form>
     <div id="authErrorMsg" style="color:var(--accent-rose); font-size:0.8rem; margin-top:12px; display:none;"></div>
@@ -1543,6 +1603,20 @@
   openAuthModalBtn.addEventListener('click', () => { authModal.classList.add('active'); });
   document.getElementById('closeAuthModalBtn').addEventListener('click', () => { authModal.classList.remove('active'); });
   document.getElementById('closeSignupAuthModalBtn').addEventListener('click', () => { authModal.classList.remove('active'); });
+  const modalCloseXBtn = document.getElementById('modalCloseXBtn');
+  if (modalCloseXBtn) {
+    modalCloseXBtn.addEventListener('click', () => { authModal.classList.remove('active'); });
+  }
+  authModal.addEventListener('click', (e) => {
+    if (e.target === authModal) {
+      authModal.classList.remove('active');
+    }
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && authModal.classList.contains('active')) {
+      authModal.classList.remove('active');
+    }
+  });
 
   tabLogin.addEventListener('click', () => {
     tabLogin.classList.add('active'); tabSignup.classList.remove('active');
@@ -2014,6 +2088,15 @@
     document.getElementById('activeQuestionTitle').textContent = `Q${currentQuestionIndex + 1}: ${q.title}`;
     document.getElementById('activeQuestionStatement').textContent = q.problem_statement;
 
+    const isLastQ = currentQuestionIndex === assessmentQuestions.length - 1;
+    const nextBtnLabel = isLastQ ? 'Finish Test 🏁' : 'Next →';
+    const nextQBtn = document.getElementById('nextQuestionBtn');
+    const nextMcqBtn = document.getElementById('nextMcqBtn');
+    const nextIntBtn = document.getElementById('nextInterviewTextBtn');
+    if (nextQBtn) nextQBtn.textContent = nextBtnLabel;
+    if (nextMcqBtn) nextMcqBtn.textContent = nextBtnLabel;
+    if (nextIntBtn) nextIntBtn.textContent = nextBtnLabel;
+
     const codingSec = document.getElementById('codingInputSection');
     const mcqSec = document.getElementById('mcqInputSection');
     const interviewSec = document.getElementById('interviewTextInputSection');
@@ -2064,7 +2147,7 @@
       if (langBadge) langBadge.textContent = qLang;
 
       const lowerLang = qLang.toLowerCase();
-      const isExecutionReady = (lowerLang === 'python' || lowerLang === 'javascript' || lowerLang === 'js' || lowerLang === 'sql');
+      const isExecutionReady = ['python', 'javascript', 'js', 'typescript', 'ts', 'sql', 'java', 'c++', 'cpp', 'c#', 'go', 'rust', 'kotlin', 'swift', 'ruby', 'php'].includes(lowerLang);
       if (statusPill) {
         if (isExecutionReady) {
           statusPill.className = 'runtime-status-pill status-ready';

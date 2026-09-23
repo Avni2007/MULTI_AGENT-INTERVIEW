@@ -777,35 +777,74 @@ def _run_virtual_compiler(
         )
 
     # 3. Output extraction from print statements and variables
+    # 3. Output extraction from print statements and variables
     var_values: dict[str, str] = {}
-    for m in re.finditer(r'(?:const|let|var|String|string|auto)\s+([a-zA-Z0-9_]+)(?:\s*:\s*[a-zA-Z0-9_]+)?\s*=\s*([\'"])(.*?)\2', code):
-        var_values[m.group(1)] = m.group(3)
+    for m in re.finditer(r'(?:[a-zA-Z0-9_<>\*\[\]]+\s+)?([a-zA-Z0-9_]+)\s*=\s*([^;,\n]+);', code):
+        v_name = m.group(1)
+        v_val = m.group(2).strip()
+        str_m = re.match(r'^([\'"])(.*?)\1$', v_val)
+        if str_m:
+            var_values[v_name] = str_m.group(2)
+        elif v_val.isdigit() or (v_val.startswith('-') and v_val[1:].isdigit()):
+            var_values[v_name] = v_val
+
+    # Bind input reading to variables if custom_input or sample input is provided
+    active_in = custom_input.strip() if custom_input is not None else (
+        question.visible_tests[0].input.strip() if (question and question.visible_tests and question.visible_tests[0].input) else None
+    )
+    if active_in is not None:
+        for m in re.finditer(r'(?:cin\s*>>\s*|getline\s*\(\s*cin\s*,\s*)([a-zA-Z0-9_]+)', code):
+            var_values[m.group(1)] = active_in
+        for m in re.finditer(r'([a-zA-Z0-9_]+)\s*=\s*[a-zA-Z0-9_]+\.(?:next|nextLine|readLine|nextInt|nextLong|nextDouble)\s*\(', code):
+            var_values[m.group(1)] = active_in
 
     extracted_outputs: list[str] = []
-    # Java System.out.println
-    for m in re.finditer(r'System\.out\.print(?:ln)?\s*\(\s*(?:([\'"])(.*?)\1|([a-zA-Z0-9_\+\s]+))\s*\)', code):
-        if m.group(2) is not None:
-            extracted_outputs.append(m.group(2))
-        elif m.group(3) is not None:
-            val_name = m.group(3).strip()
-            extracted_outputs.append(var_values.get(val_name, val_name))
 
-    # C++ cout
-    for m in re.finditer(r'cout\s*<<\s*(?:([\'"])(.*?)\1|([a-zA-Z0-9_]+))', code):
-        if m.group(2) is not None:
-            extracted_outputs.append(m.group(2))
-        elif m.group(3) is not None:
-            val_name = m.group(3).strip()
-            if val_name not in ("endl", "flush"):
-                extracted_outputs.append(var_values.get(val_name, val_name))
+    # C++ cout and std::cout
+    for m in re.finditer(r'(?:std::)?cout\s*<<\s*([^;]+);', code):
+        statement = m.group(1)
+        tokens = [t.strip() for t in statement.split('<<') if t.strip()]
+        line_parts = []
+        for t in tokens:
+            if t in ('endl', 'std::endl', 'flush', 'std::flush'):
+                continue
+            str_match = re.match(r'^([\'"])(.*?)\1$', t)
+            if str_match:
+                line_parts.append(str_match.group(2))
+            elif t in var_values:
+                line_parts.append(str(var_values[t]))
+            elif active_in is not None and t in ('s', 'str', 'input', 'line', 'ans', 'result', 'res'):
+                line_parts.append(active_in)
+            elif t.isdigit():
+                line_parts.append(t)
+        if line_parts:
+            extracted_outputs.append("".join(line_parts))
 
-    # Go / Rust / C# / TypeScript prints
-    for m in re.finditer(r'(?:fmt\.Print(?:ln)?|Console\.WriteLine|println!|console\.log)\s*\(\s*(?:([\'"])(.*?)\1|([a-zA-Z0-9_]+))\s*\)', code):
+    # Java System.out.print / println
+    for m in re.finditer(r'System\.out\.print(?:ln)?\s*\((.*?)\);', code):
+        arg = m.group(1).strip()
+        parts = [p.strip() for p in re.split(r'\s*\+\s*', arg) if p.strip()]
+        line_parts = []
+        for p in parts:
+            str_match = re.match(r'^([\'"])(.*?)\1$', p)
+            if str_match:
+                line_parts.append(str_match.group(2))
+            elif p in var_values:
+                line_parts.append(str(var_values[p]))
+            elif active_in is not None and p in ('s', 'str', 'input', 'line', 'ans', 'result', 'res', 'text'):
+                line_parts.append(active_in)
+            elif p.isdigit():
+                line_parts.append(p)
+        if line_parts:
+            extracted_outputs.append("".join(line_parts))
+
+    # Go / Rust / C# / TypeScript / Python prints
+    for m in re.finditer(r'(?:fmt\.Print(?:ln)?|Console\.WriteLine|println!|console\.log|print)\s*\(\s*(?:([\'"])(.*?)\1|([a-zA-Z0-9_]+))\s*\)', code):
         if m.group(2) is not None:
             extracted_outputs.append(m.group(2))
         elif m.group(3) is not None:
             val_name = m.group(3).strip()
-            extracted_outputs.append(var_values.get(val_name, val_name))
+            extracted_outputs.append(var_values.get(val_name, active_in if (active_in and val_name in ('s', 'ans', 'res', 'result')) else val_name))
 
     # Scenario A: Candidate specified custom input
     if custom_input is not None:
@@ -828,7 +867,7 @@ def _run_virtual_compiler(
 
     if tests_to_run:
         test_results: list[TestCaseResult] = []
-        is_stub = ("// Implement" in code or "# Implement" in code or "/* Implement" in code) and len(code_stripped) < 130
+        is_stub = ("// Implement" in code or "# Implement" in code or "/* Implement" in code) and len(code_stripped) < 180
         has_logic = len(code_stripped) > 75 and not is_stub
 
         for idx, tc in enumerate(tests_to_run, 1):
