@@ -4,7 +4,7 @@
 [![Agent Framework](https://img.shields.io/badge/Microsoft-Agent%20Framework-blue)](https://github.com/microsoft/agent-framework)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi)](https://fastapi.tiangolo.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
 
 **InterviewIQ** is an enterprise-grade AI technical assessment and mock interview preparation platform built on the **Microsoft Azure Foundry Agent Service**, **Microsoft Agent Framework**, and **Azure Document Intelligence**. It dynamically personalizes mock tests to each candidate's verified resume skills, supporting all modern programming languages with real-time compilation, test grading, and behavioral interview synthesis.
 
